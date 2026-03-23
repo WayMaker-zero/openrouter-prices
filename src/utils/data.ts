@@ -3,9 +3,13 @@ export interface OpenRouterModel {
   name: string;
   description: string;
   context_length: number;
+  architecture?: {
+    input_modalities?: string[];
+  };
   pricing: {
     prompt: string;
     completion: string;
+    input_cache_read?: string;
     image: string;
     request: string;
   };
@@ -14,6 +18,7 @@ export interface OpenRouterModel {
     max_completion_tokens: number;
     is_moderated: boolean;
   };
+  supported_parameters?: string[];
 }
 
 export interface FormattedModel {
@@ -25,9 +30,13 @@ export interface FormattedModel {
   contextLength: number;
   inputPrice1M: number;
   outputPrice1M: number;
+  cacheReadPrice1M: number | null; // null if cache read is not supported
   totalAvg1M: number; // roughly 1M input + 1M output
   isFree: boolean;
   isVariable: boolean;
+  maxOutputTokens: number | null;
+  hasVision: boolean;
+  hasFunctionCalling: boolean;
 }
 
 export const fetchModels = async (): Promise<FormattedModel[]> => {
@@ -40,6 +49,15 @@ export const fetchModels = async (): Promise<FormattedModel[]> => {
       
       const inputPrice = promptPricing * 1000000;
       const outputPrice = completionPricing * 1000000;
+      
+      let cacheReadPrice1M: number | null = null;
+      if (m.pricing.input_cache_read) {
+         const rawCache = parseFloat(m.pricing.input_cache_read);
+         // Filter out negative (dynamic) or zero prices masquerading as cache support
+         if (rawCache > 0) {
+            cacheReadPrice1M = Number((rawCache * 1000000).toFixed(4));
+         }
+      }
       
       const isVariable = promptPricing < 0 || completionPricing < 0;
 
@@ -55,9 +73,13 @@ export const fetchModels = async (): Promise<FormattedModel[]> => {
         contextLength: m.context_length,
         inputPrice1M: isVariable ? 0 : Number(inputPrice.toFixed(4)),
         outputPrice1M: isVariable ? 0 : Number(outputPrice.toFixed(4)),
+        cacheReadPrice1M,
         totalAvg1M: isVariable ? 0 : Number(((inputPrice + outputPrice) / 2).toFixed(4)),
         isFree: inputPrice === 0 && outputPrice === 0 && !isVariable,
-        isVariable
+        isVariable,
+        maxOutputTokens: m.top_provider?.max_completion_tokens || null,
+        hasVision: m.architecture?.input_modalities?.includes('image') || false,
+        hasFunctionCalling: m.supported_parameters?.includes('tools') || m.supported_parameters?.includes('tool_choice') || false
       };
     }).sort((a: FormattedModel, b: FormattedModel) => b.contextLength - a.contextLength); // sort by context length default
   } catch (error) {
