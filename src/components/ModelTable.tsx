@@ -12,8 +12,12 @@ import {
   Zap,
   RefreshCw,
   Star,
+  ChevronDown,
+  Check,
+  Building2,
+  X,
 } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 
 interface Props {
   data: FormattedModel[];
@@ -66,6 +70,34 @@ export default function ModelTable({
   const [showVision, setShowVision] = useState(false);
   const [showMaxOutput, setShowMaxOutput] = useState(false);
   const [showFunctionCalling, setShowFunctionCalling] = useState(false);
+
+  // Custom Provider Dropdown state
+  const [providerOpen, setProviderOpen] = useState(false);
+  const [providerQuery, setProviderQuery] = useState('');
+  const providerDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (providerDropdownRef.current && !providerDropdownRef.current.contains(e.target as Node)) {
+        setProviderOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setProviderOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const filteredProviders = useMemo(() => {
+    const q = providerQuery.trim().toLowerCase();
+    if (!q) return allProviders;
+    return allProviders.filter(p => p.toLowerCase().includes(q) || (p === 'All' && 'all providers'.includes(q)));
+  }, [allProviders, providerQuery]);
 
   useEffect(() => {
     getMarkedModelIds().then(ids => {
@@ -220,17 +252,107 @@ export default function ModelTable({
               className="w-full pl-10 pr-4 py-2 border border-slate-200/90 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 focus:bg-white transition-all"
             />
           </div>
-          <select
-            value={filterProvider}
-            onChange={e => setFilterProvider(e.target.value)}
-            className="border border-slate-200/90 rounded-xl px-3.5 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 focus:bg-white transition-all cursor-pointer"
-          >
-            {allProviders.map(p => (
-              <option key={p} value={p}>
-                {p === 'All' ? 'All Providers' : p}
-              </option>
-            ))}
-          </select>
+          {/* Custom Provider Dropdown */}
+          <div className="relative" ref={providerDropdownRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setProviderOpen(prev => !prev);
+                setProviderQuery('');
+              }}
+              className={`w-full sm:w-52 flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
+                providerOpen
+                  ? 'bg-white border-blue-500 ring-2 ring-blue-500/20 text-slate-900'
+                  : filterProvider !== 'All'
+                    ? 'bg-blue-50/60 border-blue-200 text-blue-800 hover:bg-blue-50'
+                    : 'bg-slate-50/50 border-slate-200/90 text-slate-700 hover:bg-white hover:border-slate-300'
+              }`}
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <Building2 className={`w-4 h-4 shrink-0 ${filterProvider !== 'All' ? 'text-blue-600' : 'text-slate-400'}`} />
+                <span className="truncate">
+                  {filterProvider === 'All' ? 'All Providers' : filterProvider}
+                </span>
+              </span>
+              <span className="flex items-center gap-1 shrink-0">
+                {filterProvider !== 'All' && (
+                  <span
+                    role="button"
+                    aria-label="Clear provider filter"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setFilterProvider('All');
+                    }}
+                    className="p-0.5 rounded-md hover:bg-blue-200/60 text-blue-600 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </span>
+                )}
+                <ChevronDown
+                  className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                    providerOpen ? 'rotate-180 text-blue-600' : ''
+                  }`}
+                />
+              </span>
+            </button>
+
+            {providerOpen && (
+              <div className="absolute right-0 mt-2 w-full sm:w-64 bg-white rounded-xl border border-slate-200/90 shadow-xl shadow-slate-900/10 z-30 overflow-hidden">
+                <div className="p-2 border-b border-slate-100 bg-slate-50/60">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Filter providers..."
+                      value={providerQuery}
+                      onChange={e => setProviderQuery(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-64 overflow-y-auto p-1.5 space-y-0.5">
+                  {filteredProviders.map(p => {
+                    const isSelected = filterProvider === p;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => {
+                          setFilterProvider(p);
+                          setProviderOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'text-slate-700 hover:bg-slate-100/80'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          {p === 'All' ? (
+                            <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                          ) : (
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[11px] border truncate ${getProviderBadgeClass(p)}`}
+                            >
+                              {p}
+                            </span>
+                          )}
+                          {p === 'All' && <span>All Providers</span>}
+                        </span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                  {filteredProviders.length === 0 && (
+                    <div className="py-6 text-center text-xs text-slate-400">
+                      No matching providers
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
