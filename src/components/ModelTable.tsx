@@ -1,6 +1,7 @@
 import type { FormattedModel } from '../utils/data';
+import { getMarkedModelIds, setModelMarked } from '../utils/db';
 import { Search, Info, ArrowDown, ArrowUp, ArrowUpDown, Settings2, Image as ImageIcon, Wrench, Zap } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 interface Props {
   data: FormattedModel[];
@@ -24,6 +25,22 @@ export default function ModelTable({
 }: Props) {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [markedIds, setMarkedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    getMarkedModelIds().then(setMarkedIds);
+  }, []);
+
+  const toggleMark = (id: string) => {
+    setMarkedIds(prev => {
+      const next = new Set(prev);
+      const marked = !next.has(id);
+      if (marked) next.add(id);
+      else next.delete(id);
+      setModelMarked(id, marked);
+      return next;
+    });
+  };
 
   // Column toggles
   const [showVision, setShowVision] = useState(false);
@@ -44,9 +61,13 @@ export default function ModelTable({
   };
 
   const sortedData = useMemo(() => {
-    if (!sortField || !sortDirection) return data;
-
     return [...data].sort((a, b) => {
+      const aMarked = markedIds.has(a.id);
+      const bMarked = markedIds.has(b.id);
+      if (aMarked !== bMarked) return aMarked ? -1 : 1;
+
+      if (!sortField || !sortDirection) return 0;
+
       // Dynamic models should be pushed to the bottom for clearer pricing comparison
       if (a.isVariable && !b.isVariable) return 1;
       if (!a.isVariable && b.isVariable) return -1;
@@ -64,7 +85,7 @@ export default function ModelTable({
       if (aValue! > bValue!) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [data, sortField, sortDirection]);
+  }, [data, sortField, sortDirection, markedIds]);
 
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400 inline-block ml-1 opacity-50 group-hover:opacity-100 transition-opacity" />;
@@ -125,100 +146,111 @@ export default function ModelTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto max-h-[600px] flex-1">
-        <table className="w-full text-left text-sm whitespace-nowrap">
+      <div className="overflow-y-auto max-h-[600px] flex-1">
+        <table className="w-full text-left text-sm">
           <thead className="bg-white sticky top-0 z-10 shadow-sm border-b border-gray-200">
             <tr>
-              <th className="px-6 py-4 font-semibold text-gray-700">Model Name</th>
-              <th className="px-6 py-4 font-semibold text-gray-700">Provider</th>
+              <th className="px-3 py-3 font-semibold text-gray-700">Model</th>
               <th 
-                className="px-6 py-4 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none"
+                className="px-3 py-3 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none leading-tight"
                 onClick={() => handleSort('inputPrice1M')}
                 title="Click to sort by Input Price"
               >
-                Input/1M ($) {renderSortIcon('inputPrice1M')}
+                Input<br/><span className="text-xs font-normal text-gray-500">/1M ($)</span> {renderSortIcon('inputPrice1M')}
               </th>
               <th 
-                className="px-6 py-4 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none"
+                className="px-3 py-3 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none leading-tight"
                 onClick={() => handleSort('outputPrice1M')}
                 title="Click to sort by Output Price"
               >
-                Output/1M ($) {renderSortIcon('outputPrice1M')}
+                Output<br/><span className="text-xs font-normal text-gray-500">/1M ($)</span> {renderSortIcon('outputPrice1M')}
               </th>
               <th 
-                className="px-6 py-4 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none"
+                className="px-3 py-3 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none leading-tight"
                 onClick={() => handleSort('cacheReadPrice1M')}
                 title="Click to sort by Cached Input Price"
               >
-                Cached In/1M ($) {renderSortIcon('cacheReadPrice1M')}
+                Cached In<br/><span className="text-xs font-normal text-gray-500">/1M ($)</span> {renderSortIcon('cacheReadPrice1M')}
               </th>
               <th 
-                className="px-6 py-4 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none"
+                className="px-3 py-3 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none leading-tight"
                 onClick={() => handleSort('cacheWritePrice1M')}
                 title="Click to sort by Cache Write Price"
               >
-                Cache Write/1M ($) {renderSortIcon('cacheWritePrice1M')}
+                Cache Write<br/><span className="text-xs font-normal text-gray-500">/1M ($)</span> {renderSortIcon('cacheWritePrice1M')}
               </th>
-              <th className="px-6 py-4 font-semibold text-gray-700 text-right">Context</th>
+              <th className="px-3 py-3 font-semibold text-gray-700 text-right">Context</th>
               
               {/* Optional Columns */}
-              {showMaxOutput && <th className="px-6 py-4 font-semibold text-gray-700 text-right bg-blue-50/30">Max Output</th>}
-              {showVision && <th className="px-6 py-4 font-semibold text-gray-700 text-center bg-blue-50/30">Vision</th>}
-              {showFunctionCalling && <th className="px-6 py-4 font-semibold text-gray-700 text-center bg-blue-50/30">Tools</th>}
+              {showMaxOutput && <th className="px-3 py-3 font-semibold text-gray-700 text-right bg-blue-50/30 leading-tight">Max<br/>Output</th>}
+              {showVision && <th className="px-3 py-3 font-semibold text-gray-700 text-center bg-blue-50/30">Vision</th>}
+              {showFunctionCalling && <th className="px-3 py-3 font-semibold text-gray-700 text-center bg-blue-50/30">Tools</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {sortedData.map(model => (
-              <tr key={model.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-3">
-                  <div className="flex items-center gap-2">
+            {sortedData.map(model => {
+              const isMarked = markedIds.has(model.id);
+              return (
+              <tr 
+                key={model.id} 
+                onClick={() => toggleMark(model.id)}
+                title="Click to mark/unmark this model"
+                className={`cursor-pointer transition-colors ${
+                  isMarked 
+                    ? 'bg-amber-50 hover:bg-amber-100/70 border-l-4 border-l-amber-400' 
+                    : 'hover:bg-gray-50'
+                }`}
+              >
+                <td className="px-3 py-2.5 whitespace-normal break-words">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-medium text-gray-800">{model.modelName}</span>
                     {model.isFree && <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Free</span>}
                   </div>
+                  <div className="text-xs text-gray-500 mt-0.5">{model.provider}</div>
                 </td>
-                <td className="px-6 py-3 text-gray-600">{model.provider}</td>
-                <td className="px-6 py-3 text-right tabular-nums text-gray-800 font-medium">
+                <td className="px-3 py-2.5 text-right tabular-nums text-gray-800 font-medium whitespace-nowrap">
                   {model.isVariable ? <span className="text-gray-400 italic font-normal">Dynamic</span> : model.inputPrice1M.toFixed(4)}
                 </td>
-                <td className="px-6 py-3 text-right tabular-nums text-gray-800 font-medium">
+                <td className="px-3 py-2.5 text-right tabular-nums text-gray-800 font-medium whitespace-nowrap">
                   {model.isVariable ? <span className="text-gray-400 italic font-normal">Dynamic</span> : model.outputPrice1M.toFixed(4)}
                 </td>
-                <td className="px-6 py-3 text-right tabular-nums text-blue-600 font-medium bg-blue-50/10">
+                <td className="px-3 py-2.5 text-right tabular-nums text-blue-600 font-medium bg-blue-50/10 whitespace-nowrap">
                   {model.isVariable 
                     ? <span className="text-gray-400 italic font-normal">Dynamic</span> 
                     : model.cacheReadPrice1M !== null 
                       ? model.cacheReadPrice1M.toFixed(4) 
                       : <span className="text-gray-300">-</span>}
                 </td>
-                <td className="px-6 py-3 text-right tabular-nums text-blue-600 font-medium bg-blue-50/10">
+                <td className="px-3 py-2.5 text-right tabular-nums text-blue-600 font-medium bg-blue-50/10 whitespace-nowrap">
                   {model.isVariable 
                     ? <span className="text-gray-400 italic font-normal">Dynamic</span> 
                     : model.cacheWritePrice1M !== null 
                       ? model.cacheWritePrice1M.toFixed(4) 
                       : <span className="text-gray-300">-</span>}
                 </td>
-                <td className="px-6 py-3 text-right tabular-nums text-gray-600">
+                <td className="px-3 py-2.5 text-right tabular-nums text-gray-600 whitespace-nowrap">
                   {model.contextLength >= 1000 ? `${(model.contextLength / 1000).toFixed(0)}k` : model.contextLength}
                 </td>
 
                 {/* Optional Columns */}
                 {showMaxOutput && (
-                  <td className="px-6 py-3 text-right tabular-nums text-gray-600 bg-blue-50/10">
+                  <td className="px-3 py-2.5 text-right tabular-nums text-gray-600 bg-blue-50/10 whitespace-nowrap">
                     {model.maxOutputTokens ? (model.maxOutputTokens >= 1000 ? `${(model.maxOutputTokens / 1000).toFixed(0)}k` : model.maxOutputTokens) : <span className="text-gray-300">-</span>}
                   </td>
                 )}
                 {showVision && (
-                  <td className="px-6 py-3 text-center bg-blue-50/10">
+                  <td className="px-3 py-2.5 text-center bg-blue-50/10">
                     {model.hasVision ? <ImageIcon className="w-4 h-4 text-green-500 mx-auto" /> : <span className="text-gray-300">-</span>}
                   </td>
                 )}
                 {showFunctionCalling && (
-                  <td className="px-6 py-3 text-center bg-blue-50/10">
+                  <td className="px-3 py-2.5 text-center bg-blue-50/10">
                     {model.hasFunctionCalling ? <Wrench className="w-4 h-4 text-blue-500 mx-auto" /> : <span className="text-gray-300">-</span>}
                   </td>
                 )}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         {data.length === 0 && (
