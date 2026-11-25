@@ -10,6 +10,7 @@ export interface OpenRouterModel {
     prompt: string;
     completion: string;
     input_cache_read?: string;
+    input_cache_write?: string;
     image: string;
     request: string;
   };
@@ -31,6 +32,7 @@ export interface FormattedModel {
   inputPrice1M: number;
   outputPrice1M: number;
   cacheReadPrice1M: number | null; // null if cache read is not supported
+  cacheWritePrice1M: number | null; // null if cache write is not supported
   totalAvg1M: number; // roughly 1M input + 1M output
   isFree: boolean;
   isVariable: boolean;
@@ -38,6 +40,13 @@ export interface FormattedModel {
   hasVision: boolean;
   hasFunctionCalling: boolean;
 }
+
+const parseOptionalPrice1M = (raw?: string): number | null => {
+  if (!raw) return null;
+  const parsed = parseFloat(raw);
+  // Filter out negative (dynamic) or zero prices masquerading as cache support
+  return parsed > 0 ? Number((parsed * 1000000).toFixed(4)) : null;
+};
 
 export const fetchModels = async (): Promise<FormattedModel[]> => {
   try {
@@ -50,14 +59,8 @@ export const fetchModels = async (): Promise<FormattedModel[]> => {
       const inputPrice = promptPricing * 1000000;
       const outputPrice = completionPricing * 1000000;
       
-      let cacheReadPrice1M: number | null = null;
-      if (m.pricing.input_cache_read) {
-         const rawCache = parseFloat(m.pricing.input_cache_read);
-         // Filter out negative (dynamic) or zero prices masquerading as cache support
-         if (rawCache > 0) {
-            cacheReadPrice1M = Number((rawCache * 1000000).toFixed(4));
-         }
-      }
+      const cacheReadPrice1M = parseOptionalPrice1M(m.pricing.input_cache_read);
+      const cacheWritePrice1M = parseOptionalPrice1M(m.pricing.input_cache_write);
       
       const isVariable = promptPricing < 0 || completionPricing < 0;
 
@@ -74,6 +77,7 @@ export const fetchModels = async (): Promise<FormattedModel[]> => {
         inputPrice1M: isVariable ? 0 : Number(inputPrice.toFixed(4)),
         outputPrice1M: isVariable ? 0 : Number(outputPrice.toFixed(4)),
         cacheReadPrice1M,
+        cacheWritePrice1M,
         totalAvg1M: isVariable ? 0 : Number(((inputPrice + outputPrice) / 2).toFixed(4)),
         isFree: inputPrice === 0 && outputPrice === 0 && !isVariable,
         isVariable,

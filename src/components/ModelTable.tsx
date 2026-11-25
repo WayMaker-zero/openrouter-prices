@@ -11,7 +11,7 @@ interface Props {
   setFilterProvider: (provider: string) => void;
 }
 
-type SortField = 'inputPrice1M' | 'outputPrice1M' | 'cacheReadPrice1M' | null;
+type SortField = 'inputPrice1M' | 'outputPrice1M' | 'cacheReadPrice1M' | 'cacheWritePrice1M' | null;
 type SortDirection = 'asc' | 'desc' | null;
 
 export default function ModelTable({ 
@@ -152,6 +152,13 @@ export default function ModelTable({
               >
                 Cached In/1M ($) {renderSortIcon('cacheReadPrice1M')}
               </th>
+              <th 
+                className="px-6 py-4 font-semibold text-gray-700 text-right cursor-pointer hover:bg-gray-50 group select-none"
+                onClick={() => handleSort('cacheWritePrice1M')}
+                title="Click to sort by Cache Write Price"
+              >
+                Cache Write/1M ($) {renderSortIcon('cacheWritePrice1M')}
+              </th>
               <th className="px-6 py-4 font-semibold text-gray-700 text-right">Context</th>
               
               {/* Optional Columns */}
@@ -181,6 +188,13 @@ export default function ModelTable({
                     ? <span className="text-gray-400 italic font-normal">Dynamic</span> 
                     : model.cacheReadPrice1M !== null 
                       ? model.cacheReadPrice1M.toFixed(4) 
+                      : <span className="text-gray-300">-</span>}
+                </td>
+                <td className="px-6 py-3 text-right tabular-nums text-blue-600 font-medium bg-blue-50/10">
+                  {model.isVariable 
+                    ? <span className="text-gray-400 italic font-normal">Dynamic</span> 
+                    : model.cacheWritePrice1M !== null 
+                      ? model.cacheWritePrice1M.toFixed(4) 
                       : <span className="text-gray-300">-</span>}
                 </td>
                 <td className="px-6 py-3 text-right tabular-nums text-gray-600">
