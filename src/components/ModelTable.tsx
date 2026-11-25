@@ -403,24 +403,29 @@ export default function ModelTable({
           return (
             <div
               key={model.id}
-              onClick={() => toggleMark(model.id)}
-              title="Click to mark/unmark this model"
-              className={`group rounded-xl border px-4 py-2.5 transition-all cursor-pointer ${
+              className={`group rounded-xl border px-4 py-2.5 transition-all ${
                 isMarked
-                  ? 'bg-amber-50/70 border-amber-300/80 shadow-xs hover:bg-amber-50 hover:border-amber-400'
+                  ? 'bg-amber-50/30 border-slate-200/80 border-l-4 border-l-amber-400 shadow-xs hover:bg-amber-50/50 hover:border-slate-300/90 hover:border-l-amber-500'
                   : 'bg-white border-slate-200/80 shadow-2xs hover:shadow-md hover:border-slate-300/90'
               }`}
             >
               <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-2 lg:gap-3">
                 {/* Model Name & Provider Badge (Single Row) */}
                 <div className="lg:col-span-4 flex items-center gap-2.5 min-w-0">
-                  <Star
-                    className={`w-4 h-4 shrink-0 transition-colors ${
-                      isMarked
-                        ? 'fill-amber-400 text-amber-500'
-                        : 'text-slate-300 group-hover:text-slate-400'
-                    }`}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleMark(model.id)}
+                    aria-label={isMarked ? 'Unmark model' : 'Mark model'}
+                    className="p-1 -m-1 rounded-md shrink-0 cursor-pointer transition-colors hover:bg-slate-100/80"
+                  >
+                    <Star
+                      className={`w-4 h-4 transition-colors ${
+                        isMarked
+                          ? 'fill-amber-400 text-amber-500'
+                          : 'text-slate-300 hover:text-slate-400'
+                      }`}
+                    />
+                  </button>
                   <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
                     <span className="font-semibold text-slate-900 text-sm truncate">
                       {model.modelName}
