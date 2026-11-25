@@ -1,6 +1,6 @@
 import type { FormattedModel } from '../utils/data';
 import { getMarkedModelIds, setModelMarked } from '../utils/db';
-import { Search, Info, ArrowDown, ArrowUp, ArrowUpDown, Settings2, Image as ImageIcon, Wrench, Zap } from 'lucide-react';
+import { Search, Info, ArrowDown, ArrowUp, ArrowUpDown, Settings2, Image as ImageIcon, Wrench, Zap, RefreshCw } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 
 interface Props {
@@ -26,10 +26,22 @@ export default function ModelTable({
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [markedIds, setMarkedIds] = useState<Set<string>>(new Set());
+  const [sortMarkedIds, setSortMarkedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    getMarkedModelIds().then(setMarkedIds);
+    getMarkedModelIds().then(ids => {
+      setMarkedIds(ids);
+      setSortMarkedIds(ids);
+    });
   }, []);
+
+  useEffect(() => {
+    setSortMarkedIds(markedIds);
+  }, [data, sortField, sortDirection]);
+
+  const handleRefreshSort = () => {
+    setSortMarkedIds(new Set(markedIds));
+  };
 
   const toggleMark = (id: string) => {
     setMarkedIds(prev => {
@@ -62,8 +74,8 @@ export default function ModelTable({
 
   const sortedData = useMemo(() => {
     return [...data].sort((a, b) => {
-      const aMarked = markedIds.has(a.id);
-      const bMarked = markedIds.has(b.id);
+      const aMarked = sortMarkedIds.has(a.id);
+      const bMarked = sortMarkedIds.has(b.id);
       if (aMarked !== bMarked) return aMarked ? -1 : 1;
 
       if (!sortField || !sortDirection) return 0;
@@ -85,7 +97,7 @@ export default function ModelTable({
       if (aValue! > bValue!) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [data, sortField, sortDirection, markedIds]);
+  }, [data, sortField, sortDirection, sortMarkedIds]);
 
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400 inline-block ml-1 opacity-50 group-hover:opacity-100 transition-opacity" />;
@@ -122,6 +134,14 @@ export default function ModelTable({
             <ToggleButton active={showVision} onClick={() => setShowVision(!showVision)} icon={ImageIcon} label="Vision" />
             <ToggleButton active={showMaxOutput} onClick={() => setShowMaxOutput(!showMaxOutput)} icon={Zap} label="Max Output" />
             <ToggleButton active={showFunctionCalling} onClick={() => setShowFunctionCalling(!showFunctionCalling)} icon={Wrench} label="Tools" />
+            <button
+              onClick={handleRefreshSort}
+              title="按当前标记状态刷新排序"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border bg-white border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </button>
           </div>
 
           <div className="flex gap-3 flex-1 md:flex-none">
