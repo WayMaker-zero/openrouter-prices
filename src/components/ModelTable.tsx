@@ -137,7 +137,7 @@ export default function ModelTable({
             <button
               onClick={handleRefreshSort}
               title="按当前标记状态刷新排序"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border bg-white border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border bg-blue-600 border-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 active:scale-95 shadow-sm cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Refresh
